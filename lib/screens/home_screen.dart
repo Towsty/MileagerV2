@@ -38,8 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initializeWidget() async {
     try {
-      // await _widgetService.initialize(context);
-      print('Widget service temporarily disabled');
+      await _widgetService.initialize(context);
+      print('Widget service initialized successfully');
     } catch (e) {
       print('Error initializing trip widget: $e');
     }

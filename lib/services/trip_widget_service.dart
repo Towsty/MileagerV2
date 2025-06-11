@@ -37,9 +37,65 @@ class TripWidgetService {
   }
 
   Future<void> updateWidget() async {
-    // Widget functionality temporarily disabled due to Android implementation issues
-    print('Trip widget update skipped - Android provider not available');
-    return;
+    try {
+      if (_tripService == null || _vehicleProvider == null) return;
+
+      String tripStatus;
+      String tripDistance = '0.0 mi';
+      String tripDuration = '00:00';
+      String vehicleName = 'No Vehicle';
+      bool isPaused = false;
+
+      final vehicles = _vehicleProvider!.vehicles;
+      if (vehicles.isNotEmpty) {
+        final firstVehicle = vehicles.first;
+        vehicleName = (firstVehicle.nickname?.isNotEmpty ?? false)
+            ? firstVehicle.nickname!
+            : '${firstVehicle.make} ${firstVehicle.model}';
+      }
+
+      if (_tripService!.isTracking) {
+        isPaused = _tripService!.isPaused;
+        tripStatus = isPaused ? 'Paused' : 'Active';
+
+        // Get current trip data
+        final currentTrip = _tripService!.currentTrip;
+        if (currentTrip != null) {
+          tripDistance = '${_tripService!.totalDistance.toStringAsFixed(1)} mi';
+
+          // Calculate duration
+          final now = DateTime.now();
+          final duration = now.difference(currentTrip.startTime);
+          final hours = duration.inHours;
+          final minutes = duration.inMinutes % 60;
+
+          if (hours > 0) {
+            tripDuration = '${hours}h ${minutes}m';
+          } else {
+            tripDuration = '${minutes}m';
+          }
+        }
+      } else {
+        tripStatus = 'Not Active';
+      }
+
+      // Update widget data
+      await HomeWidget.saveWidgetData<String>(_tripStatusKey, tripStatus);
+      await HomeWidget.saveWidgetData<String>(_tripDistanceKey, tripDistance);
+      await HomeWidget.saveWidgetData<String>(_tripDurationKey, tripDuration);
+      await HomeWidget.saveWidgetData<String>(_vehicleNameKey, vehicleName);
+      await HomeWidget.saveWidgetData<bool>(_isPausedKey, isPaused);
+
+      // Trigger widget update
+      await HomeWidget.updateWidget(
+        name: _widgetName,
+        androidName: _androidProviderName,
+      );
+
+      print('Trip widget updated successfully');
+    } catch (e) {
+      print('Error updating trip widget: $e');
+    }
   }
 
   void dispose() {

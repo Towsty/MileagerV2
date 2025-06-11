@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Mileager</string>
-    <string name="widget_description">Control trip tracking with start, stop, and pause buttons. View current trip distance and duration.</string>
+    <string name="trip_widget_description">Trip Status Widget - Shows current trip progress with start/stop controls</string>
 </resources> 
