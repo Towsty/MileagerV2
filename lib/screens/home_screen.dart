@@ -15,7 +15,7 @@ import 'package:mileager/widgets/status_lights.dart';
 import 'package:mileager/screens/trip_history_screen.dart';
 import 'package:mileager/screens/settings_screen.dart';
 import 'package:mileager/utils/string_extensions.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:mileager/services/trip_widget_service.dart';
 import 'edit_trip_screen.dart';
 
@@ -317,11 +317,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   const SizedBox(height: 24),
                   _buildTripProgressSection(),
                   if (isTracking) const SizedBox(height: 24),
-                  _buildVehiclesSection(),
+                  _buildQuickTripActionsSection(),
                   const SizedBox(height: 24),
                   _buildRecentTripsSection(),
                   const SizedBox(height: 24),
-                  _buildQuickActionsSection(),
+                  _buildVehiclesSection(),
+                  const SizedBox(height: 24),
+                  _buildBottomButtonsSection(),
                 ],
               );
             },
@@ -718,15 +720,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: trip.purpose == TripPurpose.business
-                  ? Colors.blue
-                  : Colors.green,
-              child: Icon(
-                trip.purpose == TripPurpose.business ? Icons.work : Icons.home,
-                color: Colors.white,
-                size: 20,
-              ),
+            leading: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Background: Vehicle photo or default car icon
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.grey[300],
+                  backgroundImage: vehicle?.photoPath != null &&
+                          vehicle!.photoPath!.isNotEmpty
+                      ? FileImage(File(vehicle.photoPath!))
+                      : null,
+                  child:
+                      vehicle?.photoPath == null || vehicle!.photoPath!.isEmpty
+                          ? Icon(
+                              Icons.directions_car,
+                              color: Colors.grey[600],
+                              size: 24,
+                            )
+                          : null,
+                ),
+                // Overlay: Purpose icon in bottom-right corner
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: trip.purpose == TripPurpose.business
+                          ? Colors.blue
+                          : Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      trip.purpose == TripPurpose.business
+                          ? Icons.work
+                          : Icons.home,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                  ),
+                ),
+              ],
             ),
             title: Text('${trip.distance?.toStringAsFixed(1)} miles'),
             subtitle: Text(
@@ -916,7 +952,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildQuickActionsSection() {
+  Widget _buildQuickTripActionsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -927,64 +963,89 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
         ),
         const SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.2,
+        Row(
           children: [
-            Consumer<TripTrackingService>(
-              builder: (context, tripTrackingService, child) {
-                return _buildActionCard(
-                  tripTrackingService.isTracking ? 'End Trip' : 'Start Trip',
-                  tripTrackingService.isTracking
-                      ? Icons.stop_circle
-                      : Icons.play_circle,
-                  tripTrackingService.isTracking ? Colors.red : Colors.green,
-                  tripTrackingService.isTracking ? _endCurrentTrip : _startTrip,
-                );
-              },
+            Expanded(
+              child: Consumer<TripTrackingService>(
+                builder: (context, tripTrackingService, child) {
+                  return _buildActionCard(
+                    tripTrackingService.isTracking ? 'End Trip' : 'Start Trip',
+                    tripTrackingService.isTracking
+                        ? Icons.stop_circle
+                        : Icons.play_circle,
+                    tripTrackingService.isTracking ? Colors.red : Colors.green,
+                    tripTrackingService.isTracking
+                        ? _endCurrentTrip
+                        : _startTrip,
+                  );
+                },
+              ),
             ),
-            _buildActionCard(
-              'Manual Trip',
-              Icons.edit_road,
-              Colors.blue,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddTripScreen(),
-                  ),
-                ).then((_) => _loadData());
-              },
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'Manual Trip',
+                Icons.edit_road,
+                Colors.blue,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddTripScreen(),
+                    ),
+                  ).then((_) => _loadData());
+                },
+              ),
             ),
-            _buildActionCard(
-              'Trip History',
-              Icons.history,
-              Colors.orange,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TripHistoryScreen(),
-                  ),
-                );
-              },
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomButtonsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'More Options',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'Trip History',
+                Icons.history,
+                Colors.orange,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TripHistoryScreen(),
+                    ),
+                  );
+                },
+              ),
             ),
-            _buildActionCard(
-              'Settings',
-              Icons.settings,
-              Colors.purple,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'Settings',
+                Icons.settings,
+                Colors.purple,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),

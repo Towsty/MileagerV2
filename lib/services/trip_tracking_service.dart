@@ -138,7 +138,7 @@ class TripTrackingService with ChangeNotifier {
         endTime: null,
         distance: 0.0,
         purpose: TripPurpose.business, // Default to business
-        memo: 'Auto-detected trip',
+        memo: '',
         startLocation: currentLocation ?? GeoPoint(0, 0),
         endLocation: null,
         isManualEntry: false,
@@ -224,7 +224,7 @@ class TripTrackingService with ChangeNotifier {
         endTime: null,
         distance: 0.0,
         purpose: TripPurpose.business, // Default to business
-        memo: 'Manual trip',
+        memo: '',
         startLocation: currentLocation ?? GeoPoint(0, 0),
         endLocation: null,
         isManualEntry: false,
@@ -324,7 +324,7 @@ class TripTrackingService with ChangeNotifier {
         endTime: null,
         distance: 0.0,
         purpose: TripPurpose.business, // Default to business
-        memo: 'Manual trip',
+        memo: '',
         startLocation: currentLocation ?? GeoPoint(0, 0),
         endLocation: null,
         isManualEntry: false,

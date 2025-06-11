@@ -6,6 +6,7 @@ import '../models/trip.dart';
 import '../models/vehicle.dart';
 import '../utils/string_extensions.dart';
 import 'edit_trip_screen.dart';
+import 'dart:io';
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -169,17 +170,49 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: trip.purpose == TripPurpose.business
-                        ? Colors.blue
-                        : Colors.green,
-                    child: Icon(
-                      trip.purpose == TripPurpose.business
-                          ? Icons.work
-                          : Icons.home,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Background: Vehicle photo or default car icon
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Colors.grey[300],
+                        backgroundImage: vehicle?.photoPath != null &&
+                                vehicle!.photoPath!.isNotEmpty
+                            ? FileImage(File(vehicle.photoPath!))
+                            : null,
+                        child: vehicle?.photoPath == null ||
+                                vehicle!.photoPath!.isEmpty
+                            ? Icon(
+                                Icons.directions_car,
+                                color: Colors.grey[600],
+                                size: 24,
+                              )
+                            : null,
+                      ),
+                      // Overlay: Purpose icon in bottom-right corner
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: trip.purpose == TripPurpose.business
+                                ? Colors.blue
+                                : Colors.green,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: Icon(
+                            trip.purpose == TripPurpose.business
+                                ? Icons.work
+                                : Icons.home,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(width: 12),
                   Expanded(
