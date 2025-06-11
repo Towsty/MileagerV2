@@ -20,25 +20,38 @@ class TripWidgetService {
   VehicleProvider? _vehicleProvider;
 
   Future<void> initialize(BuildContext context) async {
-    _tripService = Provider.of<TripTrackingService>(context, listen: false);
-    _vehicleProvider = Provider.of<VehicleProvider>(context, listen: false);
-
     try {
+      print('Initializing trip widget service...');
+
+      _tripService = Provider.of<TripTrackingService>(context, listen: false);
+      _vehicleProvider = Provider.of<VehicleProvider>(context, listen: false);
+
+      print(
+          'Providers initialized: TripService=${_tripService != null}, VehicleProvider=${_vehicleProvider != null}');
+
       // Initialize the home widget
       await HomeWidget.setAppGroupId('group.com.echoseofnumenor.mileager');
+      print('HomeWidget app group ID set');
 
       // Initial widget update
       await updateWidget();
 
       print('Trip widget service initialized successfully');
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Error initializing trip widget service: $e');
+      print('Stack trace: $stackTrace');
     }
   }
 
   Future<void> updateWidget() async {
     try {
-      if (_tripService == null || _vehicleProvider == null) return;
+      print('Updating trip widget...');
+
+      if (_tripService == null || _vehicleProvider == null) {
+        print(
+            'Widget update skipped: TripService=${_tripService != null}, VehicleProvider=${_vehicleProvider != null}');
+        return;
+      }
 
       String tripStatus;
       String tripDistance = '0.0 mi';
@@ -79,12 +92,17 @@ class TripWidgetService {
         tripStatus = 'Not Active';
       }
 
+      print(
+          'Widget data: Status=$tripStatus, Distance=$tripDistance, Duration=$tripDuration, Vehicle=$vehicleName');
+
       // Update widget data
       await HomeWidget.saveWidgetData<String>(_tripStatusKey, tripStatus);
       await HomeWidget.saveWidgetData<String>(_tripDistanceKey, tripDistance);
       await HomeWidget.saveWidgetData<String>(_tripDurationKey, tripDuration);
       await HomeWidget.saveWidgetData<String>(_vehicleNameKey, vehicleName);
       await HomeWidget.saveWidgetData<bool>(_isPausedKey, isPaused);
+
+      print('Widget data saved, triggering update...');
 
       // Trigger widget update
       await HomeWidget.updateWidget(
@@ -93,8 +111,9 @@ class TripWidgetService {
       );
 
       print('Trip widget updated successfully');
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Error updating trip widget: $e');
+      print('Stack trace: $stackTrace');
     }
   }
 

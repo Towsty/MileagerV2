@@ -32,16 +32,14 @@ class TripWidgetProvider : HomeWidgetProvider() {
                 setTextViewText(R.id.vehicle_name, vehicleName)
 
                 // Set up click intents for buttons
-                val startStopIntent = HomeWidgetLaunchIntent.getActivity(
+                val startStopIntent = HomeWidgetBackgroundIntent.getBroadcast(
                     context,
-                    MainActivity::class.java,
                     Uri.parse("mileager://trip/toggle")
                 )
                 setOnClickPendingIntent(R.id.start_stop_button, startStopIntent)
 
-                val pauseResumeIntent = HomeWidgetLaunchIntent.getActivity(
+                val pauseResumeIntent = HomeWidgetBackgroundIntent.getBroadcast(
                     context,
-                    MainActivity::class.java,
                     Uri.parse("mileager://trip/pause")
                 )
                 setOnClickPendingIntent(R.id.pause_resume_button, pauseResumeIntent)

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:mileager/providers/vehicle_provider.dart';
 import 'package:mileager/providers/trip_provider.dart';
 import 'package:mileager/services/location_service.dart';
@@ -39,9 +40,85 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _initializeWidget() async {
     try {
       await _widgetService.initialize(context);
+      _setupWidgetCallbacks();
       print('Widget service initialized successfully');
     } catch (e) {
       print('Error initializing trip widget: $e');
+    }
+  }
+
+  void _setupWidgetCallbacks() {
+    HomeWidget.setAppGroupId('group.com.echoseofnumenor.mileager');
+    // HomeWidget.registerInteractivityCallback(_widgetCallback);
+    print('Widget callbacks setup - using background intents instead');
+  }
+
+  Future<void> _widgetCallback(Uri? uri) async {
+    if (uri == null) return;
+    print('Widget callback received: ${uri.toString()}');
+
+    if (uri.scheme == 'mileager') {
+      switch (uri.path) {
+        case '/trip/toggle':
+          await _handleTripToggle();
+          break;
+        case '/trip/pause':
+          await _handleTripPause();
+          break;
+        default:
+          print('Unknown widget action: ${uri.path}');
+      }
+    }
+  }
+
+  Future<void> _handleTripToggle() async {
+    final tripService =
+        Provider.of<TripTrackingService>(context, listen: false);
+    final vehicleProvider =
+        Provider.of<VehicleProvider>(context, listen: false);
+
+    try {
+      if (tripService.isTracking) {
+        // Stop current trip
+        await tripService.endCurrentTrip();
+        print('Trip stopped from widget');
+      } else {
+        // Start new trip
+        if (vehicleProvider.vehicles.isNotEmpty) {
+          final vehicle = vehicleProvider.vehicles.first;
+          await tripService.startManualTrip(vehicle);
+          print('Trip started from widget');
+        } else {
+          print('No vehicles available to start trip');
+        }
+      }
+
+      // Update widget with new data
+      await _widgetService.updateWidget();
+    } catch (e) {
+      print('Error handling trip toggle: $e');
+    }
+  }
+
+  Future<void> _handleTripPause() async {
+    final tripService =
+        Provider.of<TripTrackingService>(context, listen: false);
+
+    try {
+      if (tripService.isTracking) {
+        if (tripService.isPaused) {
+          await tripService.resumeTrip();
+          print('Trip resumed from widget');
+        } else {
+          await tripService.pauseTrip();
+          print('Trip paused from widget');
+        }
+
+        // Update widget with new data
+        await _widgetService.updateWidget();
+      }
+    } catch (e) {
+      print('Error handling trip pause: $e');
     }
   }
 
