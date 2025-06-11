@@ -38,7 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initializeWidget() async {
     try {
-      await _widgetService.initialize(context);
+      // await _widgetService.initialize(context);
+      print('Widget service temporarily disabled');
     } catch (e) {
       print('Error initializing trip widget: $e');
     }
@@ -100,20 +101,26 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildQuickStatsSection(),
-              const SizedBox(height: 24),
-              _buildTripProgressSection(),
-              const SizedBox(height: 24),
-              _buildVehiclesSection(),
-              const SizedBox(height: 24),
-              _buildRecentTripsSection(),
-              const SizedBox(height: 24),
-              _buildQuickActionsSection(),
-              const SizedBox(height: 100), // Space for FAB
-            ],
+          child: Consumer<TripTrackingService>(
+            builder: (context, tripTrackingService, child) {
+              final isTracking = tripTrackingService.isTracking;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildQuickStatsSection(),
+                  const SizedBox(height: 24),
+                  _buildTripProgressSection(),
+                  if (isTracking) const SizedBox(height: 24),
+                  _buildVehiclesSection(),
+                  const SizedBox(height: 24),
+                  _buildRecentTripsSection(),
+                  const SizedBox(height: 24),
+                  _buildQuickActionsSection(),
+                  const SizedBox(height: 100), // Space for FAB
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -171,6 +178,12 @@ class _HomeScreenState extends State<HomeScreen> {
         final distance = tripTrackingService.totalDistance;
         final isPaused = tripTrackingService.isPaused;
         final isTracking = tripTrackingService.isTracking;
+        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+        // Only show the widget when there's an active trip
+        if (!isTracking) {
+          return const SizedBox.shrink();
+        }
 
         // Calculate active duration (excluding paused time)
         Duration activeDuration = Duration.zero;
@@ -181,59 +194,58 @@ class _HomeScreenState extends State<HomeScreen> {
           activeDuration = totalDuration - pausedDuration;
         }
 
-        // Determine card color and status
-        Color cardColor;
+        // Determine status and colors based on theme
         String statusText;
         IconData statusIcon;
-        Color iconColor;
+        Color statusColor;
 
-        if (!isTracking) {
-          cardColor = Colors.grey[100]!;
-          statusText = 'No Active Trip';
-          statusIcon = Icons.directions_car_outlined;
-          iconColor = Colors.grey[600]!;
-        } else if (isPaused) {
-          cardColor = Colors.orange[200]!;
+        if (isPaused) {
           statusText = 'Trip Paused';
           statusIcon = Icons.pause_circle;
-          iconColor = Colors.orange[800]!;
+          statusColor = Colors.orange;
         } else {
-          cardColor = Colors.green[200]!;
           statusText = 'Trip in Progress';
           statusIcon = Icons.directions_car;
-          iconColor = Colors.green[800]!;
+          statusColor = Colors.green;
         }
 
         return Card(
-          color: cardColor,
           elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: statusColor.withOpacity(0.3),
+              width: 2,
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
                 Row(
                   children: [
-                    Icon(statusIcon, color: iconColor, size: 28),
+                    Icon(statusIcon, color: statusColor, size: 28),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         statusText,
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: Colors.grey[800],
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ),
-                    if (isTracking)
-                      ElevatedButton(
-                        onPressed: _endCurrentTrip,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[600],
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('End Trip'),
+                    ElevatedButton(
+                      onPressed: _endCurrentTrip,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[600],
+                        foregroundColor: Colors.white,
                       ),
+                      child: const Text('End Trip'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -243,34 +255,42 @@ class _HomeScreenState extends State<HomeScreen> {
                     Column(
                       children: [
                         Text(
-                          isTracking
-                              ? '${distance.toStringAsFixed(2)}'
-                              : '0.00',
+                          '${distance.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           'Miles',
-                          style: TextStyle(color: Colors.grey[700]),
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.7),
+                          ),
                         ),
                       ],
                     ),
                     Column(
                       children: [
                         Text(
-                          isTracking ? _formatDuration(activeDuration) : '0:00',
+                          _formatDuration(activeDuration),
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           'Active Time',
-                          style: TextStyle(color: Colors.grey[700]),
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.7),
+                          ),
                         ),
                       ],
                     ),
@@ -281,23 +301,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: isTracking
-                            ? (isPaused ? _resumeTrip : _pauseTrip)
-                            : null,
+                        onPressed: isPaused ? _resumeTrip : _pauseTrip,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: !isTracking
-                              ? Colors.grey[400]
-                              : (isPaused
-                                  ? Colors.green[600]
-                                  : Colors.orange[600]),
+                          backgroundColor:
+                              isPaused ? Colors.green[600] : Colors.orange[600],
                           foregroundColor: Colors.white,
                         ),
-                        icon: Icon(!isTracking
-                            ? Icons.pause_outlined
-                            : (isPaused ? Icons.play_arrow : Icons.pause)),
-                        label: Text(!isTracking
-                            ? 'Start Trip to Pause'
-                            : (isPaused ? 'Resume Trip' : 'Pause Trip')),
+                        icon: Icon(isPaused ? Icons.play_arrow : Icons.pause),
+                        label: Text(isPaused ? 'Resume Trip' : 'Pause Trip'),
                       ),
                     ),
                   ],

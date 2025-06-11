@@ -36,6 +36,21 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.2
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
 
 flutter:
-  uses-material-design: true 
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "Mileager Icon.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "Mileager Icon.png"
+
+flutter_native_splash:
+  color: "#ffffff"
+  image: "Splash.png"
+  android: true
+  ios: false 
