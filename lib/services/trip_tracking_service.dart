@@ -126,6 +126,9 @@ class TripTrackingService with ChangeNotifier {
         return;
       }
 
+      // Enable high precision GPS for trip tracking
+      _locationService.setHighPrecisionMode(true);
+
       final currentLocation = _locationService.getCurrentGeoPoint();
 
       _currentTrip = Trip(
@@ -186,6 +189,9 @@ class TripTrackingService with ChangeNotifier {
       _currentVehicle = null;
       _tripStartTime = null;
 
+      // Revert to power saving GPS mode
+      _locationService.setHighPrecisionMode(false);
+
       notifyListeners();
       print('TripTrackingService: Automatic trip ended, pending confirmation');
     } catch (e) {
@@ -205,6 +211,10 @@ class TripTrackingService with ChangeNotifier {
           'TripTrackingService: Starting manual trip for vehicle: ${vehicle.make} ${vehicle.model}');
 
       _currentVehicle = vehicle;
+
+      // Enable high precision GPS for trip tracking
+      _locationService.setHighPrecisionMode(true);
+
       final currentLocation = _locationService.getCurrentGeoPoint();
 
       _currentTrip = Trip(
@@ -267,6 +277,9 @@ class TripTrackingService with ChangeNotifier {
       _currentTrip = null;
       _currentVehicle = null;
       _tripStartTime = null;
+
+      // Revert to power saving GPS mode
+      _locationService.setHighPrecisionMode(false);
 
       notifyListeners();
       print('TripTrackingService: Current trip ended, pending confirmation');

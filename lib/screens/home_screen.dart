@@ -117,26 +117,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildRecentTripsSection(),
                   const SizedBox(height: 24),
                   _buildQuickActionsSection(),
-                  const SizedBox(height: 100), // Space for FAB
                 ],
               );
             },
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddTripScreen(),
-            ),
-          ).then((_) => _loadData());
-        },
-        icon: const Icon(Icons.add_road),
-        label: const Text('Add Trip'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
     );
   }

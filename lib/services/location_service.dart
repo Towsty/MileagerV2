@@ -95,10 +95,8 @@ class LocationService with ChangeNotifier {
       _isConnecting = false;
       notifyListeners();
     } finally {
-      if (_isConnecting) {
-        _isConnecting = false;
-        notifyListeners();
-      }
+      _isConnecting = false;
+      notifyListeners();
     }
   }
 
