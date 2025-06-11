@@ -642,27 +642,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildVehiclePhoto(Vehicle vehicle) {
-    if (vehicle.photoPath != null && vehicle.photoPath!.isNotEmpty) {
+    final photoSource = vehicle.bestPhotoSource;
+    if (photoSource != null && photoSource.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: Image.file(
-          File(vehicle.photoPath!),
-          width: 40,
-          height: 40,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: const Icon(Icons.directions_car, color: Colors.white),
-            );
-          },
-        ),
+        child: photoSource.startsWith('http')
+            ? Image.network(
+                photoSource,
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child:
+                        const Icon(Icons.directions_car, color: Colors.white),
+                  );
+                },
+              )
+            : Image.file(
+                File(photoSource),
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child:
+                        const Icon(Icons.directions_car, color: Colors.white),
+                  );
+                },
+              ),
       );
     } else {
       return CircleAvatar(
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.directions_car, color: Colors.white),
       );
+    }
+  }
+
+  ImageProvider? _getVehicleBackgroundImage(Vehicle? vehicle) {
+    if (vehicle == null) return null;
+    final photoSource = vehicle.bestPhotoSource;
+    if (photoSource == null || photoSource.isEmpty) return null;
+
+    if (photoSource.startsWith('http')) {
+      return NetworkImage(photoSource);
+    } else {
+      return FileImage(File(photoSource));
     }
   }
 
@@ -727,18 +755,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: Colors.grey[300],
-                  backgroundImage: vehicle?.photoPath != null &&
-                          vehicle!.photoPath!.isNotEmpty
-                      ? FileImage(File(vehicle.photoPath!))
+                  backgroundImage: _getVehicleBackgroundImage(vehicle),
+                  child: !(vehicle?.hasPhoto ?? false)
+                      ? Icon(
+                          Icons.directions_car,
+                          color: Colors.grey[600],
+                          size: 24,
+                        )
                       : null,
-                  child:
-                      vehicle?.photoPath == null || vehicle!.photoPath!.isEmpty
-                          ? Icon(
-                              Icons.directions_car,
-                              color: Colors.grey[600],
-                              size: 24,
-                            )
-                          : null,
                 ),
                 // Overlay: Purpose icon in bottom-right corner
                 Positioned(
@@ -1333,6 +1357,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _saveTripToFirestore(
       Trip trip, Vehicle vehicle, TripPurpose purpose, String memo) async {
     try {
+      print(
+          'HomeScreen: Saving trip for vehicle ${vehicle.make} ${vehicle.model} (photoPath: ${vehicle.photoPath})');
+
       final updatedTrip = trip.copyWith(
         vehicleId: vehicle.id,
         purpose: purpose,
@@ -1345,8 +1372,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Clear the pending trip
       context.read<TripTrackingService>().discardPendingTrip();
 
+      print('HomeScreen: Trip saved, now reloading data...');
       // Force refresh the UI to update odometer readings
       await _loadData();
+      print('HomeScreen: Data reload completed');
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Trip saved successfully!')),

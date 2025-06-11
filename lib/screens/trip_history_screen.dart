@@ -177,12 +177,8 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                       CircleAvatar(
                         radius: 24,
                         backgroundColor: Colors.grey[300],
-                        backgroundImage: vehicle?.photoPath != null &&
-                                vehicle!.photoPath!.isNotEmpty
-                            ? FileImage(File(vehicle.photoPath!))
-                            : null,
-                        child: vehicle?.photoPath == null ||
-                                vehicle!.photoPath!.isEmpty
+                        backgroundImage: _getVehicleBackgroundImage(vehicle),
+                        child: !(vehicle?.hasPhoto ?? false)
                             ? Icon(
                                 Icons.directions_car,
                                 color: Colors.grey[600],
@@ -309,6 +305,18 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         ),
       ),
     );
+  }
+
+  ImageProvider? _getVehicleBackgroundImage(Vehicle? vehicle) {
+    if (vehicle == null) return null;
+    final photoSource = vehicle.bestPhotoSource;
+    if (photoSource == null || photoSource.isEmpty) return null;
+
+    if (photoSource.startsWith('http')) {
+      return NetworkImage(photoSource);
+    } else {
+      return FileImage(File(photoSource));
+    }
   }
 
   void _showTripDetails(Trip trip, Vehicle? vehicle) {

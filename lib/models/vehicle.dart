@@ -11,7 +11,8 @@ class Vehicle {
   final double startingOdometer;
   final String? bluetoothDeviceName;
   final String? bluetoothMacId;
-  final String? photoPath;
+  final String? photoPath; // Local file path for photos
+  final String? photoUrl; // URL for web-based photos
   final String? nickname;
 
   Vehicle({
@@ -25,7 +26,8 @@ class Vehicle {
     required this.startingOdometer,
     this.bluetoothDeviceName,
     this.bluetoothMacId,
-    this.photoPath,
+    this.photoPath, // Local file path
+    this.photoUrl, // Web URL
     this.nickname,
   });
 
@@ -41,7 +43,8 @@ class Vehicle {
       'startingOdometer': startingOdometer,
       'bluetoothDeviceName': bluetoothDeviceName,
       'bluetoothMacId': bluetoothMacId,
-      'photoPath': photoPath,
+      'photoPath': photoPath, // Local file path
+      'photoUrl': photoUrl, // Web URL
       'nickname': nickname,
     };
   }
@@ -58,7 +61,8 @@ class Vehicle {
       startingOdometer: (map['startingOdometer'] ?? 0).toDouble(),
       bluetoothDeviceName: map['bluetoothDeviceName'],
       bluetoothMacId: map['bluetoothMacId'],
-      photoPath: map['photoPath'],
+      photoPath: map['photoPath'], // Local file path
+      photoUrl: map['photoUrl'], // Web URL
       nickname: map['nickname'],
     );
   }
@@ -81,6 +85,7 @@ class Vehicle {
     String? bluetoothDeviceName,
     String? bluetoothMacId,
     String? photoPath,
+    String? photoUrl,
     String? nickname,
   }) {
     return Vehicle(
@@ -95,7 +100,15 @@ class Vehicle {
       bluetoothDeviceName: bluetoothDeviceName ?? this.bluetoothDeviceName,
       bluetoothMacId: bluetoothMacId ?? this.bluetoothMacId,
       photoPath: photoPath ?? this.photoPath,
+      photoUrl: photoUrl ?? this.photoUrl,
       nickname: nickname ?? this.nickname,
     );
   }
+
+  /// Get the best available photo (prioritize web URL over local path)
+  String? get bestPhotoSource => photoUrl ?? photoPath;
+
+  /// Check if vehicle has any photo
+  bool get hasPhoto =>
+      (photoUrl?.isNotEmpty ?? false) || (photoPath?.isNotEmpty ?? false);
 }

@@ -20,7 +20,11 @@ class VehicleProvider with ChangeNotifier {
     try {
       final snapshot = await _firestore.collection('vehicles').get();
       _vehicles = snapshot.docs.map((doc) {
-        return Vehicle.fromFirestore(doc);
+        final vehicle = Vehicle.fromFirestore(doc);
+        // Debug logging to track photo paths
+        print(
+            'VehicleProvider: Loaded vehicle ${vehicle.make} ${vehicle.model} with photoPath: ${vehicle.photoPath}');
+        return vehicle;
       }).toList();
 
       _isLoading = false;
@@ -34,6 +38,8 @@ class VehicleProvider with ChangeNotifier {
 
   Future<void> addVehicle(Vehicle vehicle) async {
     try {
+      print(
+          'VehicleProvider: Adding vehicle ${vehicle.make} ${vehicle.model} with photoPath: ${vehicle.photoPath}');
       final docRef =
           await _firestore.collection('vehicles').add(vehicle.toMap());
       final newVehicle = vehicle.copyWith(id: docRef.id);
@@ -47,6 +53,8 @@ class VehicleProvider with ChangeNotifier {
 
   Future<void> updateVehicle(Vehicle vehicle) async {
     try {
+      print(
+          'VehicleProvider: Updating vehicle ${vehicle.make} ${vehicle.model} with photoPath: ${vehicle.photoPath}');
       await _firestore
           .collection('vehicles')
           .doc(vehicle.id)
