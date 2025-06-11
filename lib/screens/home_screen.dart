@@ -15,6 +15,7 @@ import 'package:mileager/screens/trip_history_screen.dart';
 import 'package:mileager/screens/settings_screen.dart';
 import 'package:mileager/utils/string_extensions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mileager/services/trip_widget_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,12 +25,29 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final TripWidgetService _widgetService = TripWidgetService();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      _initializeWidget();
     });
+  }
+
+  Future<void> _initializeWidget() async {
+    try {
+      await _widgetService.initialize(context);
+    } catch (e) {
+      print('Error initializing trip widget: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _widgetService.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -868,8 +886,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final vehicles = context.read<VehicleProvider>().vehicles;
     Vehicle? selectedVehicle = vehicles.isNotEmpty ? vehicles.first : null;
-    TripPurpose selectedPurpose = TripPurpose.business;
+    TripPurpose selectedPurpose = TripPurpose.personal; // Default to personal
     String memo = '';
+    final memoController = TextEditingController();
 
     showDialog(
       context: context,
@@ -908,34 +927,107 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Purpose selection
-                  DropdownButtonFormField<TripPurpose>(
-                    value: selectedPurpose,
-                    decoration: const InputDecoration(labelText: 'Purpose'),
-                    items: TripPurpose.values.map((purpose) {
-                      return DropdownMenuItem(
-                        value: purpose,
-                        child: Text(
-                            purpose.toString().split('.').last.capitalize()),
-                      );
-                    }).toList(),
-                    onChanged: (purpose) {
-                      setState(() {
-                        selectedPurpose = purpose!;
-                      });
-                    },
+                  // Purpose selection with toggle buttons
+                  const Text('Trip Purpose:',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedPurpose = TripPurpose.personal;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: selectedPurpose == TripPurpose.personal
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey[200],
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(8),
+                                bottomLeft: Radius.circular(8),
+                              ),
+                              border: Border.all(
+                                color: selectedPurpose == TripPurpose.personal
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.grey[400]!,
+                              ),
+                            ),
+                            child: Text(
+                              'Personal',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: selectedPurpose == TripPurpose.personal
+                                    ? Colors.white
+                                    : Colors.black,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedPurpose = TripPurpose.business;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: selectedPurpose == TripPurpose.business
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey[200],
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(8),
+                                bottomRight: Radius.circular(8),
+                              ),
+                              border: Border.all(
+                                color: selectedPurpose == TripPurpose.business
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.grey[400]!,
+                              ),
+                            ),
+                            child: Text(
+                              'Business',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: selectedPurpose == TripPurpose.business
+                                    ? Colors.white
+                                    : Colors.black,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
                   // Memo field
                   TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Memo (optional)',
+                    controller: memoController,
+                    decoration: InputDecoration(
+                      labelText: selectedPurpose == TripPurpose.business
+                          ? 'Memo (required for business)'
+                          : 'Memo (optional)',
                       hintText: 'Enter trip details...',
+                      errorText: selectedPurpose == TripPurpose.business &&
+                              memo.trim().isEmpty
+                          ? 'Memo is required for business trips'
+                          : null,
                     ),
                     maxLines: 2,
                     onChanged: (value) {
-                      memo = value;
+                      setState(() {
+                        memo = value;
+                      });
                     },
                   ),
                 ],
@@ -950,7 +1042,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Text('Discard'),
                 ),
                 ElevatedButton(
-                  onPressed: selectedVehicle == null
+                  onPressed: selectedVehicle == null ||
+                          (selectedPurpose == TripPurpose.business &&
+                              memo.trim().isEmpty)
                       ? null
                       : () async {
                           Navigator.pop(context);
