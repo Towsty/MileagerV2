@@ -1,91 +1,116 @@
-# Mileager
+# MileagerV2
 
-A Flutter app for tracking vehicle mileage with automated trip recording using Bluetooth connectivity.
+A Flutter-based mileage tracking app designed for business trip logging and tax reporting.
 
 ## Features
 
+### 🚗 Vehicle Management
 - Add and manage multiple vehicles
-- Automatic trip tracking via Bluetooth connection
-- Manual trip entry for offline trips
-- Trip categorization (business/personal)
-- Monthly mileage reports in Excel format
-- Vehicle photo management
-- Status indicators for trip, GPS, and Bluetooth
-- Dark mode support
+- Track starting odometer readings
+- Upload vehicle photos
+- Set vehicle nicknames
 
-## Requirements
+### 📍 Trip Tracking
+- **Manual Trip Tracking**: Start and stop trips manually
+- **Automatic Trip Detection**: GPS-based automatic trip detection
+- **Pause/Resume Functionality**: Pause trips temporarily and resume later
+- **Real-time Distance Calculation**: Accurate GPS-based distance tracking
+- **Variable GPS Tracking**: Intelligent power-saving GPS intervals
 
-- Android 14 or higher
-- Bluetooth 4.0 or higher
-- Location services enabled
-- Storage permissions for reports and photos
+### 📊 Trip Management
+- Categorize trips by purpose (Business, Personal, Medical, etc.)
+- Add custom memos to trips
+- View detailed trip history
+- Real-time trip progress monitoring
 
-## Setup
+### 🎨 User Interface
+- Clean, modern Material Design interface
+- Dark/Light theme support
+- Intuitive trip progress widget with visual status indicators
+- Color-coded trip states (active, paused, inactive)
 
-1. Install Flutter:
+### 🔧 Settings & Debugging
+- Debug tracking mode for testing
+- Customizable settings
+- Status indicators for services
+- Debug panel for development
+
+## Technical Features
+
+- **Flutter Framework**: Cross-platform mobile development
+- **Firebase Integration**: Cloud storage and authentication
+- **GPS Location Services**: High-precision location tracking
+- **Activity Recognition**: Automatic driving detection
+- **State Management**: Provider pattern for reactive UI updates
+
+## Getting Started
+
+### Prerequisites
+- Flutter SDK
+- Android Studio / Xcode
+- Firebase project setup
+
+### Installation
+1. Clone the repository:
    ```bash
-   # Follow Flutter installation guide at https://flutter.dev/docs/get-started/install
+   git clone https://github.com/iancarr1412/MileagerV2.git
+   cd MileagerV2
    ```
 
-2. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/mileager.git
-   cd mileager
-   ```
-
-3. Install dependencies:
+2. Install dependencies:
    ```bash
    flutter pub get
    ```
 
-4. Setup Firebase:
-   - Create a new Firebase project
-   - Add an Android app to your Firebase project
-   - Download the `google-services.json` file
-   - Place it in the `android/app` directory
+3. Configure Firebase:
+   - Add your `google-services.json` (Android) or `GoogleService-Info.plist` (iOS)
+   - Update Firebase configuration
 
-5. Run the app:
+4. Run the app:
    ```bash
    flutter run
    ```
 
-## Permissions
+## App Structure
 
-The app requires the following permissions:
-- Bluetooth (for device connection)
-- Location (for trip tracking)
-- Storage (for reports and photos)
-- Background processing (for continuous trip tracking)
+```
+lib/
+├── models/          # Data models (Trip, Vehicle)
+├── providers/       # State management
+├── screens/         # UI screens
+├── services/        # Business logic services
+├── utils/          # Utility functions
+└── widgets/        # Reusable UI components
+```
 
-## Architecture
+## Key Components
 
-- **Models**: Data structures for vehicles and trips
-- **Providers**: State management using Provider pattern
-- **Services**: Bluetooth and location services
-- **Screens**: UI components and navigation
-- **Utils**: Helper functions and theme configuration
+- **TripTrackingService**: Core trip tracking logic with pause/resume functionality
+- **LocationService**: GPS tracking and distance calculation
+- **ActivityRecognitionService**: Automatic driving detection
+- **VehicleProvider**: Vehicle management state
+- **TripProvider**: Trip data management state
 
-## Data Storage
+## Recent Updates
 
-- Vehicle and trip data stored in Firebase Firestore
-- Local storage for vehicle photos
-- Monthly reports saved to device storage
-- Automatic data sync when online
+- ✅ Added trip pause/resume functionality
+- ✅ Improved UI with better color contrast and readability
+- ✅ Fixed manual trip auto-termination issues
+- ✅ Enhanced trip progress widget with always-visible status
+- ✅ Better state management for trip tracking
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
+## Support
 
-- Flutter team for the amazing framework
-- Firebase for backend services
-- All contributors and users 
+For issues and feature requests, please use the GitHub Issues page. 
