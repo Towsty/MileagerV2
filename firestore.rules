@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read and write access to all documents
+    // Since this is a personal app without authentication
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    // Vehicle collection rules
+    match /vehicles/{vehicleId} {
+      allow read, write: if true;
+      
+      // Validate vehicle data
+      function isValidVehicle() {
+        let vehicle = request.resource.data;
+        return vehicle.make is string &&
+               vehicle.model is string &&
+               vehicle.year is number &&
+               vehicle.color is string &&
+               vehicle.vin is string &&
+               vehicle.licensePlate is string &&
+               vehicle.startingOdometer is number;
+      }
+    }
+
+    // Trip collection rules
+    match /trips/{tripId} {
+      allow read, write: if true;
+      
+      // Validate trip data
+      function isValidTrip() {
+        let trip = request.resource.data;
+        return trip.vehicleId is string &&
+               trip.startTime is timestamp &&
+               (trip.endTime is timestamp || trip.endTime == null) &&
+               trip.distance is number &&
+               trip.purpose in ['business', 'personal'] &&
+               (trip.memo is string || trip.memo == null);
+      }
+    }
+  }
+}
