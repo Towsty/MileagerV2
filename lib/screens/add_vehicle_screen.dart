@@ -201,12 +201,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       });
 
       print('Image saved successfully to: $permanentPath');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo saved successfully!')),
-        );
-      }
     } catch (e, stackTrace) {
       print('Error in _pickAndCropImage: $e');
       print('Stack trace: $stackTrace');

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/vehicle.dart';
 import '../models/trip.dart';
 import '../providers/vehicle_provider.dart';
@@ -328,6 +327,12 @@ class _EditTripScreenState extends State<EditTripScreen> {
         appBar: AppBar(
           title: const Text('Edit Trip'),
           actions: [
+            // Save button
+            IconButton(
+              onPressed: _isLoading ? null : _saveChanges,
+              icon: const Icon(Icons.save),
+              tooltip: 'Save Changes',
+            ),
             // Clone button
             IconButton(
               onPressed: _isLoading ? null : _cloneTrip,
