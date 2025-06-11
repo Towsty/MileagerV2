@@ -111,6 +111,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/build/
+**/build/
+*.apk
+*.aab
+*.dex
+kernel_blob.bin
 
 # iOS related
 **/ios/**/*.mode1v3
