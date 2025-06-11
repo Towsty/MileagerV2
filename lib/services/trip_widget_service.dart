@@ -101,6 +101,8 @@ class TripWidgetService {
       await HomeWidget.saveWidgetData<String>(_tripDurationKey, tripDuration);
       await HomeWidget.saveWidgetData<String>(_vehicleNameKey, vehicleName);
       await HomeWidget.saveWidgetData<bool>(_isPausedKey, isPaused);
+      await HomeWidget.saveWidgetData<bool>(
+          'is_tracking', _tripService!.isTracking);
 
       print('Widget data saved, triggering update...');
 

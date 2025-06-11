@@ -34,13 +34,13 @@ class TripWidgetProvider : HomeWidgetProvider() {
                 // Set up click intents for buttons
                 val startStopIntent = HomeWidgetBackgroundIntent.getBroadcast(
                     context,
-                    Uri.parse("mileager://trip/toggle")
+                    Uri.parse("widget://trip/toggle")
                 )
                 setOnClickPendingIntent(R.id.start_stop_button, startStopIntent)
 
                 val pauseResumeIntent = HomeWidgetBackgroundIntent.getBroadcast(
                     context,
-                    Uri.parse("mileager://trip/pause")
+                    Uri.parse("widget://trip/pause")
                 )
                 setOnClickPendingIntent(R.id.pause_resume_button, pauseResumeIntent)
 

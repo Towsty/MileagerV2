@@ -5,6 +5,7 @@ import '../providers/vehicle_provider.dart';
 import '../models/trip.dart';
 import '../models/vehicle.dart';
 import '../utils/string_extensions.dart';
+import 'edit_trip_screen.dart';
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -495,9 +496,16 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   }
 
   void _editTrip(Trip trip, Vehicle? vehicle) {
-    // TODO: Navigate to trip edit screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Trip editing coming soon!')),
-    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditTripScreen(trip: trip, vehicle: vehicle),
+      ),
+    ).then((result) {
+      // If changes were made, refresh the trip list to reflect updates
+      if (result == true) {
+        context.read<TripProvider>().fetchTrips();
+      }
+    });
   }
 }

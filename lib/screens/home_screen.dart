@@ -17,6 +17,91 @@ import 'package:mileager/screens/settings_screen.dart';
 import 'package:mileager/utils/string_extensions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mileager/services/trip_widget_service.dart';
+import 'edit_trip_screen.dart';
+
+// Top-level background callback for widget button presses
+@pragma('vm:entry-point')
+Future<void> backgroundCallback(Uri? uri) async {
+  if (uri == null) return;
+
+  print('Widget background callback: ${uri.toString()}');
+
+  try {
+    if (uri.scheme == 'widget') {
+      switch (uri.path) {
+        case '/trip/toggle':
+          await _handleBackgroundTripToggle();
+          break;
+        case '/trip/pause':
+          await _handleBackgroundTripPause();
+          break;
+        default:
+          print('Unknown widget action: ${uri.path}');
+      }
+    }
+  } catch (e) {
+    print('Error in background callback: $e');
+  }
+}
+
+Future<void> _handleBackgroundTripToggle() async {
+  try {
+    // Read current trip state from widget data
+    final isTracking =
+        await HomeWidget.getWidgetData<bool>('is_tracking') ?? false;
+
+    if (isTracking) {
+      // Stop trip
+      await HomeWidget.saveWidgetData('is_tracking', false);
+      await HomeWidget.saveWidgetData('trip_status', 'Not Active');
+      await HomeWidget.saveWidgetData('trip_distance', '0.0 mi');
+      await HomeWidget.saveWidgetData('trip_duration', '00:00');
+      print('Trip stopped from widget background');
+    } else {
+      // Start trip
+      await HomeWidget.saveWidgetData('is_tracking', true);
+      await HomeWidget.saveWidgetData('trip_status', 'Active');
+      await HomeWidget.saveWidgetData('trip_distance', '0.0 mi');
+      await HomeWidget.saveWidgetData('trip_duration', '00:00');
+      print('Trip started from widget background');
+    }
+
+    // Update widget display
+    await HomeWidget.updateWidget(
+        name: 'trip_widget', androidName: 'TripWidgetProvider');
+  } catch (e) {
+    print('Error handling background trip toggle: $e');
+  }
+}
+
+Future<void> _handleBackgroundTripPause() async {
+  try {
+    // Read current state
+    final isTracking =
+        await HomeWidget.getWidgetData<bool>('is_tracking') ?? false;
+    final isPaused = await HomeWidget.getWidgetData<bool>('is_paused') ?? false;
+
+    if (isTracking) {
+      if (isPaused) {
+        // Resume trip
+        await HomeWidget.saveWidgetData('is_paused', false);
+        await HomeWidget.saveWidgetData('trip_status', 'Active');
+        print('Trip resumed from widget background');
+      } else {
+        // Pause trip
+        await HomeWidget.saveWidgetData('is_paused', true);
+        await HomeWidget.saveWidgetData('trip_status', 'Paused');
+        print('Trip paused from widget background');
+      }
+
+      // Update widget display
+      await HomeWidget.updateWidget(
+          name: 'trip_widget', androidName: 'TripWidgetProvider');
+    }
+  } catch (e) {
+    print('Error handling background trip pause: $e');
+  }
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,16 +110,57 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final TripWidgetService _widgetService = TripWidgetService();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
       _initializeWidget();
+      _checkIncomingIntent();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Update widget when app comes to foreground
+      _widgetService.updateWidget();
+    }
+  }
+
+  Future<void> _checkIncomingIntent() async {
+    try {
+      // Check if app was launched from widget
+      final initialUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+      if (initialUri != null) {
+        print('App launched from widget with URI: $initialUri');
+        await _handleWidgetAction(initialUri);
+      }
+    } catch (e) {
+      print('Error checking incoming intent: $e');
+    }
+  }
+
+  Future<void> _handleWidgetAction(Uri uri) async {
+    print('Handling widget action: ${uri.toString()}');
+
+    if (uri.scheme == 'widget' || uri.scheme == 'mileager') {
+      switch (uri.path) {
+        case '/trip/toggle':
+          await _handleTripToggle();
+          break;
+        case '/trip/pause':
+          await _handleTripPause();
+          break;
+        default:
+          print('Unknown widget action: ${uri.path}');
+      }
+    }
   }
 
   Future<void> _initializeWidget() async {
@@ -49,8 +175,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _setupWidgetCallbacks() {
     HomeWidget.setAppGroupId('group.com.echoseofnumenor.mileager');
-    // HomeWidget.registerInteractivityCallback(_widgetCallback);
-    print('Widget callbacks setup - using background intents instead');
+    // Register background callback for widget button presses
+    HomeWidget.registerInteractivityCallback(backgroundCallback);
+    print('Widget callbacks setup - registered background callback');
   }
 
   Future<void> _widgetCallback(Uri? uri) async {
@@ -124,6 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _widgetService.dispose();
     super.dispose();
   }
@@ -685,10 +813,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _editTrip(Trip trip, Vehicle? vehicle) {
-    // TODO: Navigate to trip edit screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Trip editing coming soon!')),
-    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditTripScreen(trip: trip, vehicle: vehicle),
+      ),
+    ).then((result) {
+      // If changes were made, refresh the data to update odometer calculations
+      if (result == true) {
+        _loadData();
+      }
+    });
   }
 
   Widget _buildEmptyVehiclesCard() {
