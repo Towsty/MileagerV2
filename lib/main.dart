@@ -12,6 +12,7 @@ import 'services/location_service.dart';
 import 'services/bluetooth_service.dart';
 import 'services/trip_tracking_service.dart';
 import 'services/activity_recognition_service.dart';
+import 'services/auto_tracking_service.dart';
 
 // Screens
 import 'screens/home_screen.dart';

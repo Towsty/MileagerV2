@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:mileager/providers/vehicle_provider.dart';
 import 'package:mileager/providers/trip_provider.dart';
 import 'package:mileager/screens/cache_debug_screen.dart';
+import 'package:mileager/screens/auto_tracking_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -189,6 +190,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Card(
             child: Column(
               children: [
+                ListTile(
+                  leading: const Icon(Icons.track_changes),
+                  title: const Text('Auto Tracking'),
+                  subtitle: const Text('Configure automatic trip detection'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AutoTrackingScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
                 SwitchListTile(
                   title: const Text('Debug Trip Tracking'),
                   subtitle:

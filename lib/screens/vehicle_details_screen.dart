@@ -7,8 +7,10 @@ import '../providers/trip_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../services/trip_tracking_service.dart';
 import '../services/report_service.dart';
+import '../services/auto_tracking_service.dart';
 import 'add_vehicle_screen.dart';
 import 'add_trip_screen.dart';
+import 'auto_tracking_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,6 +24,8 @@ class VehicleDetailsScreen extends StatefulWidget {
 }
 
 class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
+  final AutoTrackingService _autoTrackingService = AutoTrackingService();
+
   @override
   void initState() {
     super.initState();
@@ -121,6 +125,11 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                       ),
                     ),
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // Auto Tracking Settings
+                  _buildAutoTrackingCard(),
 
                   const SizedBox(height: 16),
 
@@ -720,6 +729,237 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
         SnackBar(content: Text('Error generating report: $e')),
       );
     }
+  }
+
+  Widget _buildAutoTrackingCard() {
+    final associations = _autoTrackingService.getAllAssociations();
+    final androidAutoAssociation = associations['androidAuto']
+        ?.entries
+        .where((entry) => entry.value == widget.vehicle.id)
+        .map((entry) => entry.key)
+        .firstOrNull;
+    final bluetoothAssociation = associations['bluetooth']
+        ?.entries
+        .where((entry) => entry.value == widget.vehicle.id)
+        .map((entry) => entry.key)
+        .firstOrNull;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.track_changes, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'Auto Tracking',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Configure automatic trip detection for this vehicle',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+
+            // Android Auto Status
+            _buildTrackingStatusRow(
+              'Android Auto',
+              androidAutoAssociation != null ? 'Associated' : 'Not Associated',
+              androidAutoAssociation != null ? Colors.green : Colors.grey,
+              Icons.android,
+              androidAutoAssociation,
+            ),
+
+            const SizedBox(height: 8),
+
+            // Bluetooth Status
+            _buildTrackingStatusRow(
+              'Bluetooth Device',
+              bluetoothAssociation ?? 'Not Associated',
+              bluetoothAssociation != null ? Colors.green : Colors.grey,
+              Icons.bluetooth,
+              bluetoothAssociation,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _showBluetoothAssociationDialog,
+                    icon: const Icon(Icons.bluetooth),
+                    label: Text(bluetoothAssociation != null
+                        ? 'Change Device'
+                        : 'Add Bluetooth'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AutoTrackingScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.settings),
+                    label: const Text('Settings'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrackingStatusRow(String label, String value, Color color,
+      IconData icon, String? deviceId) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child:
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ),
+        if (deviceId != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withOpacity(0.3)),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.w500, fontSize: 12),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red, size: 16),
+            onPressed: () => _confirmRemoveDeviceAssociation(deviceId),
+            tooltip: 'Remove association',
+          ),
+        ] else ...[
+          Text(
+            value,
+            style: TextStyle(color: color, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _showBluetoothAssociationDialog() {
+    final deviceNameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Associate Bluetooth Device'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Enter the name of your vehicle\'s Bluetooth device. You can find this in your phone\'s Bluetooth settings.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: deviceNameController,
+              decoration: const InputDecoration(
+                labelText: 'Bluetooth Device Name',
+                hintText: 'e.g., "My Car Audio"',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (deviceNameController.text.isNotEmpty) {
+                await _autoTrackingService.associateDeviceWithVehicle(
+                  AutoTrackingTrigger.bluetooth,
+                  deviceNameController.text.trim(),
+                  widget.vehicle.id,
+                );
+                Navigator.of(context).pop();
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Associated "${deviceNameController.text}" with this vehicle',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: const Text('Associate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmRemoveDeviceAssociation(String deviceId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Device Association'),
+        content: Text('Remove association for "$deviceId"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              // Determine trigger type based on device associations
+              final associations = _autoTrackingService.getAllAssociations();
+              AutoTrackingTrigger? trigger;
+
+              if (associations['androidAuto']?.containsKey(deviceId) == true) {
+                trigger = AutoTrackingTrigger.androidAuto;
+              } else if (associations['bluetooth']?.containsKey(deviceId) ==
+                  true) {
+                trigger = AutoTrackingTrigger.bluetooth;
+              }
+
+              if (trigger != null) {
+                await _autoTrackingService.removeAssociation(trigger, deviceId);
+                Navigator.of(context).pop();
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text('Removed association for "$deviceId"')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showDeleteConfirmation(BuildContext context) async {

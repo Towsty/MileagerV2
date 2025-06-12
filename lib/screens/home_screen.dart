@@ -6,6 +6,7 @@ import 'package:mileager/providers/vehicle_provider.dart';
 import 'package:mileager/providers/trip_provider.dart';
 import 'package:mileager/services/location_service.dart';
 import 'package:mileager/services/trip_tracking_service.dart';
+import 'package:mileager/services/auto_tracking_service.dart';
 import 'package:mileager/models/vehicle.dart';
 import 'package:mileager/models/trip.dart';
 import 'package:mileager/screens/add_vehicle_screen.dart';
@@ -113,6 +114,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final TripWidgetService _widgetService = TripWidgetService();
+  final AutoTrackingService _autoTrackingService = AutoTrackingService();
 
   @override
   void initState() {
@@ -121,6 +123,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
       _initializeWidget();
+      _initializeAutoTracking();
       _checkIncomingIntent();
     });
   }
@@ -171,6 +174,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       print('Widget service initialized successfully');
     } catch (e) {
       print('Error initializing trip widget: $e');
+    }
+  }
+
+  Future<void> _initializeAutoTracking() async {
+    try {
+      print('HomeScreen: Starting auto tracking service initialization...');
+
+      final vehicleProvider =
+          Provider.of<VehicleProvider>(context, listen: false);
+      final tripTrackingService =
+          Provider.of<TripTrackingService>(context, listen: false);
+      final locationService =
+          Provider.of<LocationService>(context, listen: false);
+
+      print(
+          'HomeScreen: Got providers - Vehicle: ${vehicleProvider != null}, Trip: ${tripTrackingService != null}, Location: ${locationService != null}');
+
+      await _autoTrackingService.initialize(
+        vehicleProvider: vehicleProvider,
+        tripTrackingService: tripTrackingService,
+        locationService: locationService,
+      );
+
+      print('HomeScreen: Auto tracking service initialized successfully');
+      print(
+          'HomeScreen: Service status - Initialized: ${_autoTrackingService.isInitialized}, Android Auto: ${_autoTrackingService.isAndroidAutoConnected}');
+    } catch (e, stackTrace) {
+      print('HomeScreen: Error initializing auto tracking service: $e');
+      print('HomeScreen: Stack trace: $stackTrace');
     }
   }
 
@@ -254,6 +286,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _widgetService.dispose();
+    _autoTrackingService.dispose();
     super.dispose();
   }
 
