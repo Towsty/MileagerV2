@@ -123,36 +123,90 @@ class AutoTrackingService {
 
   Future<void> _initializeAndroidAuto() async {
     try {
-      print('AutoTrackingService: Checking Android Auto platform channel...');
+      print('AutoTrackingService: 🚗 Initializing Android Auto detection...');
 
-      // Check current Android Auto status
-      _isAndroidAutoConnected =
-          await _androidAutoChannel.invokeMethod('isAndroidAutoConnected') ??
-              false;
-      print(
-          'AutoTrackingService: Initial Android Auto status: $_isAndroidAutoConnected');
+      // Test platform channel connectivity first
+      print('AutoTrackingService: 📞 Testing platform channel connectivity...');
+
+      try {
+        // Check current Android Auto status
+        _isAndroidAutoConnected =
+            await _androidAutoChannel.invokeMethod('isAndroidAutoConnected') ??
+                false;
+        print(
+            'AutoTrackingService: ✅ Platform channel connected - Initial Android Auto status: $_isAndroidAutoConnected');
+      } catch (e) {
+        print('AutoTrackingService: ❌ Platform channel test failed: $e');
+        throw e;
+      }
 
       // Listen for Android Auto connection changes
-      print('AutoTrackingService: Setting up Android Auto event listener...');
+      print(
+          'AutoTrackingService: 📡 Setting up Android Auto event listener...');
       _androidAutoSubscription = _androidAutoEventChannel
           .receiveBroadcastStream()
           .listen((dynamic event) {
-        print('AutoTrackingService: Received Android Auto event: $event');
+        print('AutoTrackingService: 🔄 Received Android Auto event: $event');
         final isConnected = event as bool;
         _handleAndroidAutoConnectionChange(isConnected);
       }, onError: (error) {
-        print('AutoTrackingService: Android Auto event stream error: $error');
+        print(
+            'AutoTrackingService: ⚠️ Android Auto event stream error: $error');
       });
 
+      // Perform initial check
+      await _checkAndroidAutoDevices();
+
       print(
-          'AutoTrackingService: Android Auto monitoring initialized (current: $_isAndroidAutoConnected)');
+          'AutoTrackingService: ✅ Android Auto monitoring initialized (current: $_isAndroidAutoConnected, associations: ${_androidAutoToVehicle.length})');
     } catch (e, stackTrace) {
-      print('AutoTrackingService: Android Auto not available - $e');
+      print('AutoTrackingService: ❌ Android Auto initialization failed - $e');
       print('AutoTrackingService: Stack trace: $stackTrace');
     }
   }
 
-  void _handleAndroidAutoConnectionChange(bool isConnected) async {
+  /// Active polling method for Android Auto detection
+  Future<void> _checkAndroidAutoDevices() async {
+    try {
+      print(
+          'AutoTrackingService: 🔍 Checking Android Auto status (active polling)...');
+
+      // Call platform channel to check current status
+      bool isCurrentlyConnected = false;
+
+      try {
+        isCurrentlyConnected =
+            await _androidAutoChannel.invokeMethod('isAndroidAutoConnected') ??
+                false;
+        print(
+            'AutoTrackingService: 📊 Platform channel reports Android Auto: $isCurrentlyConnected');
+      } catch (e) {
+        print('AutoTrackingService: ⚠️ Platform channel call failed: $e');
+        // Platform channel might not be working, but continue
+      }
+
+      // Check if state changed
+      if (isCurrentlyConnected != _isAndroidAutoConnected) {
+        print(
+            'AutoTrackingService: 🔄 Android Auto state changed: $_isAndroidAutoConnected → $isCurrentlyConnected');
+        _isAndroidAutoConnected = isCurrentlyConnected;
+        await _handleAndroidAutoConnectionChange(isCurrentlyConnected);
+      } else if (isCurrentlyConnected && _androidAutoToVehicle.isNotEmpty) {
+        print(
+            'AutoTrackingService: ✅ Android Auto still connected and has ${_androidAutoToVehicle.length} associations');
+      } else if (isCurrentlyConnected) {
+        print(
+            'AutoTrackingService: ⚠️ Android Auto connected but no vehicle associations found');
+      } else {
+        print('AutoTrackingService: ⭕ Android Auto not connected');
+      }
+    } catch (e, stackTrace) {
+      print('AutoTrackingService: ❌ Error checking Android Auto devices: $e');
+      print('AutoTrackingService: Stack trace: $stackTrace');
+    }
+  }
+
+  Future<void> _handleAndroidAutoConnectionChange(bool isConnected) async {
     print(
         'AutoTrackingService: Android Auto ${isConnected ? 'connected' : 'disconnected'}');
 
@@ -234,6 +288,7 @@ class AutoTrackingService {
       Timer.periodic(const Duration(seconds: 10), (timer) {
         if (_isInitialized) {
           _checkBluetoothDevices();
+          _checkAndroidAutoDevices(); // Add active Android Auto polling
         } else {
           timer.cancel();
         }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../services/auto_tracking_service.dart';
@@ -273,9 +274,19 @@ class _AutoTrackingScreenState extends State<AutoTrackingScreen> {
               style: TextStyle(color: Colors.grey[600]),
             ),
             const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _showAndroidAutoAssociationDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Android Auto Vehicle'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
             if (associations.isEmpty) ...[
               const Text(
-                'No vehicle associations yet. Connect to Android Auto and start a trip to create an association.',
+                'No vehicle associations yet. Use the button above to associate a vehicle with Android Auto.',
                 style: TextStyle(fontStyle: FontStyle.italic),
               ),
             ] else ...[
@@ -433,6 +444,34 @@ class _AutoTrackingScreenState extends State<AutoTrackingScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _testAndroidAuto,
+                    icon: const Icon(Icons.android),
+                    label: const Text('Test Android Auto'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _checkPlatformChannels,
+                    icon: const Icon(Icons.settings_phone),
+                    label: const Text('Check Platform'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -471,6 +510,87 @@ class _AutoTrackingScreenState extends State<AutoTrackingScreen> {
         onPressed: () => _confirmRemoveAssociation(trigger, deviceId),
       ),
     );
+  }
+
+  void _showAndroidAutoAssociationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Associate Android Auto Vehicle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Select which vehicle to associate with Android Auto connections:',
+            ),
+            const SizedBox(height: 16),
+            Consumer<VehicleProvider>(
+              builder: (context, vehicleProvider, child) {
+                final vehicles = vehicleProvider.vehicles;
+
+                if (vehicles.isEmpty) {
+                  return const Text(
+                    'No vehicles available. Add a vehicle first.',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  );
+                }
+
+                return DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Select Vehicle',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: vehicles.map((vehicle) {
+                    return DropdownMenuItem<String>(
+                      value: vehicle.id,
+                      child: Text('${vehicle.make} ${vehicle.model}'),
+                    );
+                  }).toList(),
+                  onChanged: (vehicleId) {
+                    if (vehicleId != null) {
+                      Navigator.of(context).pop();
+                      _associateAndroidAutoWithVehicle(vehicleId);
+                    }
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _associateAndroidAutoWithVehicle(String vehicleId) async {
+    try {
+      await _autoTrackingService.associateDeviceWithVehicle(
+        AutoTrackingTrigger.androidAuto,
+        'android_auto_session',
+        vehicleId,
+      );
+
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Android Auto associated with vehicle successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to associate Android Auto: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _showBluetoothAssociationDialog() {
@@ -1076,5 +1196,99 @@ class _AutoTrackingScreenState extends State<AutoTrackingScreen> {
       case AutoTrackingTrigger.none:
         return 'None';
     }
+  }
+
+  void _testAndroidAuto() async {
+    print('=== ANDROID AUTO TEST ===');
+
+    try {
+      // Test platform channel connectivity
+      print('1. Testing platform channel...');
+      const androidAutoChannel = MethodChannel('com.mileager/android_auto');
+      final isConnected =
+          await androidAutoChannel.invokeMethod('isAndroidAutoConnected');
+      print('   Platform channel result: $isConnected');
+
+      // Check service status
+      print('2. Checking service status...');
+      print(
+          '   Service Android Auto status: ${_autoTrackingService.isAndroidAutoConnected}');
+
+      // Check associations
+      final associations = _autoTrackingService.getAllAssociations();
+      final autoAssociations = associations['androidAuto'] ?? {};
+      print('   Android Auto associations: ${autoAssociations.length}');
+      for (final entry in autoAssociations.entries) {
+        final vehicle = _vehicleProvider.vehicles
+            .where((v) => v.id == entry.value)
+            .firstOrNull;
+        print(
+            '   - ${entry.key} → ${vehicle?.make} ${vehicle?.model ?? 'Unknown Vehicle'}');
+      }
+
+      // Test guidance
+      print('3. Testing guidance...');
+      if (autoAssociations.isEmpty) {
+        print('   ⚠️  No associations found - add a vehicle association first');
+      } else {
+        print('   ✅ Associations configured! To test:');
+        print('   1. Connect phone to vehicle\'s Android Auto');
+        print('   2. Watch logs for detection messages');
+        print('   3. App should auto-start trip');
+      }
+    } catch (e) {
+      print('Android Auto test error: $e');
+    }
+
+    print('=== ANDROID AUTO TEST COMPLETE ===');
+  }
+
+  void _checkPlatformChannels() async {
+    print('=== PLATFORM CHANNEL TEST ===');
+
+    const androidAutoChannel = MethodChannel('com.mileager/android_auto');
+    const androidAutoEventChannel =
+        EventChannel('com.mileager/android_auto_events');
+
+    try {
+      // Test method channel
+      print('1. Testing method channel...');
+      try {
+        final result =
+            await androidAutoChannel.invokeMethod('isAndroidAutoConnected');
+        print('   ✅ Method channel working - result: $result');
+      } catch (e) {
+        print('   ❌ Method channel failed: $e');
+        print('   This means MainActivity.kt is not properly configured');
+      }
+
+      // Test event channel setup
+      print('2. Testing event channel...');
+      try {
+        print('   ✅ Event channel accessible: ${androidAutoEventChannel.name}');
+      } catch (e) {
+        print('   ❌ Event channel failed: $e');
+      }
+
+      // Check MainActivity.kt platform channel handlers
+      print('3. Platform channel status summary...');
+      print('   Method channel: com.mileager/android_auto');
+      print('   Event channel: com.mileager/android_auto_events');
+      print('   Expected methods: isAndroidAutoConnected');
+      print('   Expected events: boolean connection status');
+
+      // Test a known bad method to verify error handling
+      print('4. Testing error handling...');
+      try {
+        await androidAutoChannel.invokeMethod('nonExistentMethod');
+        print('   ❌ Error handling not working');
+      } catch (e) {
+        print('   ✅ Error handling working: $e');
+      }
+    } catch (e) {
+      print('Platform channel test error: $e');
+    }
+
+    print('=== PLATFORM CHANNEL TEST COMPLETE ===');
   }
 }
