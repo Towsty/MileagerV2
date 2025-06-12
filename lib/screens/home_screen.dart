@@ -18,6 +18,7 @@ import 'package:mileager/utils/string_extensions.dart';
 
 import 'package:mileager/services/trip_widget_service.dart';
 import 'edit_trip_screen.dart';
+import 'package:mileager/widgets/cached_vehicle_image.dart';
 
 // Top-level background callback for widget button presses
 @pragma('vm:entry-point')
@@ -642,44 +643,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildVehiclePhoto(Vehicle vehicle) {
-    final photoSource = vehicle.bestPhotoSource;
-    if (photoSource != null && photoSource.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: photoSource.startsWith('http')
-            ? Image.network(
-                photoSource,
-                width: 40,
-                height: 40,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child:
-                        const Icon(Icons.directions_car, color: Colors.white),
-                  );
-                },
-              )
-            : Image.file(
-                File(photoSource),
-                width: 40,
-                height: 40,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child:
-                        const Icon(Icons.directions_car, color: Colors.white),
-                  );
-                },
-              ),
-      );
-    } else {
-      return CircleAvatar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: const Icon(Icons.directions_car, color: Colors.white),
-      );
-    }
+    return CachedVehicleImageWidget(
+      vehicle: vehicle,
+      width: 40,
+      height: 40,
+      fit: BoxFit.cover,
+    );
   }
 
   ImageProvider? _getVehicleBackgroundImage(Vehicle? vehicle) {

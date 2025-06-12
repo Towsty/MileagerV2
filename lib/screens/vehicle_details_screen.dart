@@ -368,21 +368,6 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddVehicleScreen(vehicle: widget.vehicle),
-            ),
-          ).then((_) {
-            // Refresh the screen when returning from edit
-            setState(() {});
-          });
-        },
-        icon: const Icon(Icons.edit),
-        label: const Text('Edit Vehicle'),
-      ),
     );
   }
 

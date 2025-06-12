@@ -4,6 +4,10 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import '../utils/settings_utils.dart';
 import '../utils/directory_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:mileager/providers/vehicle_provider.dart';
+import 'package:mileager/providers/trip_provider.dart';
+import 'package:mileager/screens/cache_debug_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -301,6 +305,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildSectionHeader('Debug & Diagnostics'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.cached),
+                  title: const Text('Image Cache Debug'),
+                  subtitle: const Text('View and manage cached images'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CacheDebugScreen(),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),

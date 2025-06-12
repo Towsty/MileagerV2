@@ -5,8 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mileager/providers/vehicle_provider.dart';
 import 'package:mileager/models/vehicle.dart';
+import 'package:mileager/widgets/cached_vehicle_image.dart';
 
 class AddVehicleScreen extends StatefulWidget {
   final Vehicle? vehicle;
@@ -112,10 +114,47 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     return permanentPath;
   }
 
+  String _convertToDirectUrl(String url) {
+    print('Converting URL: $url');
+
+    // Convert Google Drive sharing URLs to direct URLs
+    if (url.contains('drive.google.com/file/d/')) {
+      final regex = RegExp(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)');
+      final match = regex.firstMatch(url);
+      if (match != null) {
+        final fileId = match.group(1);
+        // Try the thumbnail format which is more reliable for images
+        final directUrl =
+            'https://drive.google.com/thumbnail?id=$fileId&sz=w400';
+        print('Google Drive conversion: $url -> $directUrl');
+        return directUrl;
+      }
+    }
+
+    // Convert Dropbox sharing URLs to direct URLs
+    if (url.contains('dropbox.com') && url.contains('dl=0')) {
+      final directUrl = url.replaceAll('dl=0', 'dl=1');
+      print('Dropbox conversion: $url -> $directUrl');
+      return directUrl;
+    }
+
+    // Return original URL if no conversion needed
+    print('No conversion needed for: $url');
+    return url;
+  }
+
   Future<void> _saveVehicle() async {
     if (!_formKey.currentState!.validate()) return;
 
     final String? oldPhotoPath = widget.vehicle?.photoPath;
+
+    // Convert URL to direct URL if needed
+    String? finalPhotoUrl;
+    if (!_useLocalPhoto && _photoUrlController.text.isNotEmpty) {
+      finalPhotoUrl = _convertToDirectUrl(_photoUrlController.text.trim());
+      print('Original URL: ${_photoUrlController.text}');
+      print('Converted URL: $finalPhotoUrl');
+    }
 
     final vehicle = Vehicle(
       id: widget.vehicle?.id ??
@@ -129,9 +168,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       startingOdometer: double.parse(_odometerController.text),
       nickname: _nicknameController.text,
       photoPath: _useLocalPhoto ? _photoPath : null,
-      photoUrl: !_useLocalPhoto && _photoUrlController.text.isNotEmpty
-          ? _photoUrlController.text
-          : null,
+      photoUrl: finalPhotoUrl,
     );
 
     try {
@@ -175,17 +212,58 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   Widget _buildPhotoSection() {
     return Column(
       children: [
-        // Photo display
+        // Photo display with caching
         GestureDetector(
           onTap: _useLocalPhoto ? _pickAndCropImage : null,
-          child: CircleAvatar(
-            radius: 60,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            backgroundImage: _getPhotoImageProvider(),
-            child: _getPhotoImageProvider() == null
-                ? const Icon(Icons.add_a_photo, size: 40)
-                : null,
-          ),
+          child: _useLocalPhoto
+              ? CircleAvatar(
+                  radius: 60,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  backgroundImage:
+                      _photoPath != null ? FileImage(File(_photoPath!)) : null,
+                  onBackgroundImageError: (exception, stackTrace) {
+                    print('Local image loading error: $exception');
+                  },
+                  child: _photoPath == null
+                      ? const Icon(Icons.add_a_photo, size: 40)
+                      : null,
+                )
+              : _photoUrlController.text.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(60),
+                      child: CachedNetworkImage(
+                        imageUrl: _convertToDirectUrl(
+                            _photoUrlController.text.trim()),
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.cover,
+                        cacheKey:
+                            'preview_${_photoUrlController.text.hashCode}',
+                        placeholder: (context, url) => CircleAvatar(
+                          radius: 60,
+                          backgroundColor: Colors.grey[300],
+                          child:
+                              const CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        errorWidget: (context, url, error) {
+                          print('Network image loading error: $error');
+                          return CircleAvatar(
+                            radius: 60,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            child: const Icon(Icons.error,
+                                size: 40, color: Colors.white),
+                          );
+                        },
+                        fadeInDuration: const Duration(milliseconds: 300),
+                        fadeOutDuration: const Duration(milliseconds: 100),
+                      ),
+                    )
+                  : CircleAvatar(
+                      radius: 60,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      child: const Icon(Icons.add_a_photo, size: 40),
+                    ),
         ),
         const SizedBox(height: 16),
 
@@ -219,18 +297,26 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         const SizedBox(height: 16),
 
         // URL input field (only shown when URL mode is selected)
-        if (!_useLocalPhoto)
+        if (!_useLocalPhoto) ...[
           TextFormField(
             controller: _photoUrlController,
             decoration: const InputDecoration(
               labelText: 'Photo URL',
               hintText: 'https://example.com/photo.jpg',
               prefixIcon: Icon(Icons.link),
+              helperText:
+                  'Supports Google Drive, Dropbox, and direct image URLs',
             ),
+            maxLines: 2,
             onChanged: (value) {
               setState(() {
                 _hasUnsavedChanges = true;
               });
+              // Debug: Test URL conversion in real-time
+              if (value.isNotEmpty) {
+                final converted = _convertToDirectUrl(value.trim());
+                print('Real-time conversion: $value -> $converted');
+              }
             },
             validator: (value) {
               if (!_useLocalPhoto && (value?.isNotEmpty ?? false)) {
@@ -242,17 +328,82 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               return null;
             },
           ),
+          const SizedBox(height: 8),
+
+          // Debug: Show converted URL
+          if (_photoUrlController.text.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Converted URL:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _convertToDirectUrl(_photoUrlController.text.trim()),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Supported URL formats:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '• Google Drive: Share link (will be auto-converted)\n'
+                  '• Dropbox: Share link (will be auto-converted)\n'
+                  '• Direct image URLs: .jpg, .png, .gif, etc.\n'
+                  '• Images are cached locally for faster loading',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
-  }
-
-  ImageProvider? _getPhotoImageProvider() {
-    if (_useLocalPhoto && _photoPath != null) {
-      return FileImage(File(_photoPath!));
-    } else if (!_useLocalPhoto && _photoUrlController.text.isNotEmpty) {
-      return NetworkImage(_photoUrlController.text);
-    }
-    return null;
   }
 
   @override

@@ -7,6 +7,8 @@ import '../models/vehicle.dart';
 import '../utils/string_extensions.dart';
 import 'edit_trip_screen.dart';
 import 'dart:io';
+import 'package:mileager/screens/add_trip_screen.dart';
+import 'package:mileager/widgets/cached_vehicle_image.dart';
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -174,17 +176,14 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                     alignment: Alignment.center,
                     children: [
                       // Background: Vehicle photo or default car icon
-                      CircleAvatar(
+                      CachedVehicleImage(
+                        vehicle: vehicle,
                         radius: 24,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage: _getVehicleBackgroundImage(vehicle),
-                        child: !(vehicle?.hasPhoto ?? false)
-                            ? Icon(
-                                Icons.directions_car,
-                                color: Colors.grey[600],
-                                size: 24,
-                              )
-                            : null,
+                        child: Icon(
+                          Icons.directions_car,
+                          color: Colors.grey[600],
+                          size: 24,
+                        ),
                       ),
                       // Overlay: Purpose icon in bottom-right corner
                       Positioned(
@@ -305,18 +304,6 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         ),
       ),
     );
-  }
-
-  ImageProvider? _getVehicleBackgroundImage(Vehicle? vehicle) {
-    if (vehicle == null) return null;
-    final photoSource = vehicle.bestPhotoSource;
-    if (photoSource == null || photoSource.isEmpty) return null;
-
-    if (photoSource.startsWith('http')) {
-      return NetworkImage(photoSource);
-    } else {
-      return FileImage(File(photoSource));
-    }
   }
 
   void _showTripDetails(Trip trip, Vehicle? vehicle) {
@@ -548,5 +535,13 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         context.read<TripProvider>().fetchTrips();
       }
     });
+  }
+
+  Widget _buildVehicleImage(Vehicle vehicle) {
+    return CachedVehicleImage(
+      vehicle: vehicle,
+      radius: 20,
+      child: const Icon(Icons.directions_car, color: Colors.white),
+    );
   }
 }
