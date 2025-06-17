@@ -1,116 +1,77 @@
-# MileagerV2
+# Mileager Web Application
 
-A Flutter-based mileage tracking app designed for business trip logging and tax reporting.
+This is the web interface for the Mileager mileage tracking application. It provides a modern, responsive interface for managing vehicles, tracking trips, and generating reports.
 
 ## Features
 
-### 🚗 Vehicle Management
-- Add and manage multiple vehicles
-- Track starting odometer readings
-- Upload vehicle photos
-- Set vehicle nicknames
-
-### 📍 Trip Tracking
-- **Manual Trip Tracking**: Start and stop trips manually
-- **Automatic Trip Detection**: GPS-based automatic trip detection
-- **Pause/Resume Functionality**: Pause trips temporarily and resume later
-- **Real-time Distance Calculation**: Accurate GPS-based distance tracking
-- **Variable GPS Tracking**: Intelligent power-saving GPS intervals
-
-### 📊 Trip Management
-- Categorize trips by purpose (Business, Personal, Medical, etc.)
-- Add custom memos to trips
-- View detailed trip history
-- Real-time trip progress monitoring
-
-### 🎨 User Interface
-- Clean, modern Material Design interface
-- Dark/Light theme support
-- Intuitive trip progress widget with visual status indicators
-- Color-coded trip states (active, paused, inactive)
-
-### 🔧 Settings & Debugging
-- Debug tracking mode for testing
-- Customizable settings
-- Status indicators for services
-- Debug panel for development
-
-## Technical Features
-
-- **Flutter Framework**: Cross-platform mobile development
-- **Firebase Integration**: Cloud storage and authentication
-- **GPS Location Services**: High-precision location tracking
-- **Activity Recognition**: Automatic driving detection
-- **State Management**: Provider pattern for reactive UI updates
+- Dashboard with key statistics
+- Vehicle management
+- Trip tracking and history
+- Report generation
+- Real-time updates
 
 ## Getting Started
 
 ### Prerequisites
-- Flutter SDK
-- Android Studio / Xcode
-- Firebase project setup
+
+- Node.js 18.x or later
+- npm 9.x or later
+- Firebase project configuration
 
 ### Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/iancarr1412/MileagerV2.git
-   cd MileagerV2
-   ```
 
+1. Clone the repository
 2. Install dependencies:
    ```bash
-   flutter pub get
+   npm install
+   ```
+3. Create a `.env.local` file in the root directory with your Firebase configuration:
+   ```
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
    ```
 
-3. Configure Firebase:
-   - Add your `google-services.json` (Android) or `GoogleService-Info.plist` (iOS)
-   - Update Firebase configuration
+### Development
 
-4. Run the app:
-   ```bash
-   flutter run
-   ```
+Run the development server:
 
-## App Structure
-
-```
-lib/
-├── models/          # Data models (Trip, Vehicle)
-├── providers/       # State management
-├── screens/         # UI screens
-├── services/        # Business logic services
-├── utils/          # Utility functions
-└── widgets/        # Reusable UI components
+```bash
+npm run dev
 ```
 
-## Key Components
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-- **TripTrackingService**: Core trip tracking logic with pause/resume functionality
-- **LocationService**: GPS tracking and distance calculation
-- **ActivityRecognitionService**: Automatic driving detection
-- **VehicleProvider**: Vehicle management state
-- **TripProvider**: Trip data management state
+### Building for Production
 
-## Recent Updates
+```bash
+npm run build
+```
 
-- ✅ Added trip pause/resume functionality
-- ✅ Improved UI with better color contrast and readability
-- ✅ Fixed manual trip auto-termination issues
-- ✅ Enhanced trip progress widget with always-visible status
-- ✅ Better state management for trip tracking
+### Running in Production
+
+```bash
+npm start
+```
+
+## Project Structure
+
+- `/src/app` - Next.js app router pages
+- `/src/components` - Reusable React components
+- `/src/lib` - Utility functions and Firebase configuration
+- `/src/types` - TypeScript type definitions
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For issues and feature requests, please use the GitHub Issues page. 
+This project is licensed under the MIT License - see the LICENSE file for details. 

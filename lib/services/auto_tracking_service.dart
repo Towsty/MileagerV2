@@ -122,9 +122,9 @@ class AutoTrackingService {
   // ==================== ANDROID AUTO DETECTION ====================
 
   Future<void> _initializeAndroidAuto() async {
-    try {
-      print('AutoTrackingService: 🚗 Initializing Android Auto detection...');
+    print('AutoTrackingService: 🚗 Initializing Android Auto detection...');
 
+    try {
       // Test platform channel connectivity first
       print('AutoTrackingService: 📞 Testing platform channel connectivity...');
 
@@ -137,7 +137,10 @@ class AutoTrackingService {
             'AutoTrackingService: ✅ Platform channel connected - Initial Android Auto status: $_isAndroidAutoConnected');
       } catch (e) {
         print('AutoTrackingService: ❌ Platform channel test failed: $e');
-        throw e;
+        print(
+            'AutoTrackingService: 🔧 Continuing with Android Auto disabled - MainActivity.kt may not be configured properly');
+        // Don't throw - continue with Android Auto disabled
+        return;
       }
 
       // Listen for Android Auto connection changes
@@ -162,15 +165,16 @@ class AutoTrackingService {
     } catch (e, stackTrace) {
       print('AutoTrackingService: ❌ Android Auto initialization failed - $e');
       print('AutoTrackingService: Stack trace: $stackTrace');
+      print('AutoTrackingService: 🔧 Continuing without Android Auto support');
     }
   }
 
   /// Active polling method for Android Auto detection
   Future<void> _checkAndroidAutoDevices() async {
-    try {
-      print(
-          'AutoTrackingService: 🔍 Checking Android Auto status (active polling)...');
+    print(
+        'AutoTrackingService: 🔍 Checking Android Auto status (active polling)...');
 
+    try {
       // Call platform channel to check current status
       bool isCurrentlyConnected = false;
 
@@ -182,7 +186,10 @@ class AutoTrackingService {
             'AutoTrackingService: 📊 Platform channel reports Android Auto: $isCurrentlyConnected');
       } catch (e) {
         print('AutoTrackingService: ⚠️ Platform channel call failed: $e');
+        print(
+            'AutoTrackingService: 🔧 MainActivity.kt platform channel not working');
         // Platform channel might not be working, but continue
+        return;
       }
 
       // Check if state changed
@@ -288,7 +295,8 @@ class AutoTrackingService {
       Timer.periodic(const Duration(seconds: 10), (timer) {
         if (_isInitialized) {
           _checkBluetoothDevices();
-          _checkAndroidAutoDevices(); // Add active Android Auto polling
+          // Always try Android Auto polling, even if initialization failed
+          _checkAndroidAutoDevices();
         } else {
           timer.cancel();
         }
