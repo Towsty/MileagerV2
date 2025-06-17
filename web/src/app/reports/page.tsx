@@ -1,24 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { db } from '../../lib/firebase';
+import { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface Vehicle {
   id: string;
   name: string;
-  make: string;
-  model: string;
-  year: number;
-  odometer?: number;
+  [key: string]: any;
 }
 
 interface MileageEntry {
   id: string;
-  vehicleId: string;
   date: string;
   odometer: number;
-  notes?: string;
+  vehicleId: string;
+  [key: string]: any;
 }
 
 interface VehicleStats {
@@ -26,11 +23,10 @@ interface VehicleStats {
   totalMiles: number;
   entries: number;
   averageMilesPerDay: number;
-  lastEntry?: MileageEntry;
+  lastEntry: MileageEntry | undefined;
 }
 
 export default function ReportsPage() {
-  // const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [stats, setStats] = useState<VehicleStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,25 +37,24 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [dateRange]);
 
   async function fetchData() {
     try {
       setLoading(true);
       // Fetch vehicles
-      // const vehiclesSnapshot = await getDocs(collection(db, 'vehicles'));
-      // const vehiclesList = vehiclesSnapshot.docs.map((doc) => ({
-      //   id: doc.id,
-      //   ...doc.data(),
-      // })) as Vehicle[];
-      // setVehicles(vehiclesList);
+      const vehiclesSnapshot = await getDocs(collection(db, 'vehicles'));
+      const vehiclesList = vehiclesSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Vehicle[];
 
       // Fetch mileage entries for each vehicle
-      const statsPromises = // vehiclesList.map(async (vehicle: Vehicle) => {
+      const statsPromises = vehiclesList.map(async (vehicle: Vehicle) => {
         // First get all entries for the vehicle
         const entriesQuery = query(
           collection(db, 'mileage_entries'),
-          where('vehicleId', '==', 'your-vehicle-id')
+          where('vehicleId', '==', vehicle.id)
         );
         const entriesSnapshot = await getDocs(entriesQuery);
         const allEntries = entriesSnapshot.docs.map((doc) => ({
@@ -90,20 +85,13 @@ export default function ReportsPage() {
         );
 
         return {
-          vehicle: {
-            id: 'your-vehicle-id',
-            name: 'Your Vehicle',
-            make: 'Your Make',
-            model: 'Your Model',
-            year: new Date().getFullYear(),
-            odometer: entries[0].odometer,
-          },
+          vehicle,
           totalMiles,
           entries: entries.length,
           averageMilesPerDay: totalMiles / daysDiff,
           lastEntry: entries[0],
         };
-      // });
+      });
 
       const statsResults = await Promise.all(statsPromises);
       setStats(statsResults);
