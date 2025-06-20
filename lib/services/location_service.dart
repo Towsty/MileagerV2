@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geocoding/geocoding.dart';
+import 'dart:math' show cos, sqrt, asin;
 
 class LocationService with ChangeNotifier {
   bool _hasLocation = false;
@@ -33,71 +35,36 @@ class LocationService with ChangeNotifier {
   }
 
   Future<void> initialize() async {
-    try {
-      _isConnecting = true;
-      notifyListeners();
+    await _checkLocationPermission();
+  }
 
-      // Check if location services are enabled
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled()
-          .timeout(const Duration(seconds: 5));
-      if (!serviceEnabled) {
-        print('Location services are disabled.');
-        _isConnecting = false;
-        notifyListeners();
-        return;
-      }
+  Future<bool> _checkLocationPermission() async {
+    bool serviceEnabled;
+    LocationPermission permission;
 
-      // Check current permission status
-      LocationPermission permission = await Geolocator.checkPermission()
-          .timeout(const Duration(seconds: 5));
-
-      print('Current location permission: $permission');
-
-      // Only request permission if it's denied or not determined
-      if (permission == LocationPermission.denied) {
-        print('Location permission denied, requesting permission...');
-        permission = await Geolocator.requestPermission()
-            .timeout(const Duration(seconds: 10));
-        print('Permission request result: $permission');
-      }
-
-      // Check if we have sufficient permissions
-      if (permission == LocationPermission.deniedForever) {
-        print('Location permissions are permanently denied.');
-        _isConnecting = false;
-        notifyListeners();
-        return;
-      }
-
-      if (permission == LocationPermission.denied) {
-        print('Location permissions are denied.');
-        _isConnecting = false;
-        notifyListeners();
-        return;
-      }
-
-      // If we have whileInUse or always permission, we can proceed
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        print('Location permission granted: $permission');
-        // Start periodic location updates
-        _startLocationUpdates();
-        print('Location service initialized successfully');
-      } else {
-        print('Insufficient location permissions: $permission');
-        _isConnecting = false;
-        notifyListeners();
-        return;
-      }
-    } catch (e) {
-      _hasLocation = false;
-      print('Location service initialization error: $e');
-      _isConnecting = false;
-      notifyListeners();
-    } finally {
-      _isConnecting = false;
-      notifyListeners();
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      debugPrint('LocationService: Location services are disabled');
+      return false;
     }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        debugPrint('LocationService: Location permissions are denied');
+        return false;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      debugPrint(
+          'LocationService: Location permissions are permanently denied');
+      return false;
+    }
+
+    debugPrint('LocationService: Location permissions granted');
+    return true;
   }
 
   void _startLocationUpdates() {
@@ -140,19 +107,111 @@ class LocationService with ChangeNotifier {
   }
 
   GeoPoint? getCurrentGeoPoint() {
-    if (_lastPosition != null) {
-      return GeoPoint(_lastPosition!.latitude, _lastPosition!.longitude);
+    try {
+      final lastKnownPosition = Geolocator.getLastKnownPosition();
+      if (lastKnownPosition != null) {
+        debugPrint('LocationService: Using last known position');
+        return GeoPoint(
+            0, 0); // This will be updated when position is available
+      }
+      debugPrint('LocationService: No last known position available');
+      return null;
+    } catch (e) {
+      debugPrint('LocationService: Error getting current GeoPoint: $e');
+      return null;
     }
-    return null;
+  }
+
+  Future<Position?> getCurrentLocation() async {
+    try {
+      if (!await _checkLocationPermission()) {
+        debugPrint('LocationService: Failed to get location - no permission');
+        return null;
+      }
+      final position = await Geolocator.getCurrentPosition();
+      debugPrint(
+          'LocationService: Got current location - ${position.latitude}, ${position.longitude}');
+      return position;
+    } catch (e) {
+      debugPrint('LocationService: Error getting current location: $e');
+      return null;
+    }
+  }
+
+  Future<GeoPoint?> getCoordinatesFromAddress(String address) async {
+    try {
+      debugPrint(
+          'LocationService: Attempting to get coordinates for address: $address');
+
+      if (address.trim().isEmpty) {
+        debugPrint('LocationService: Empty address provided');
+        return null;
+      }
+
+      final locations = await locationFromAddress(address);
+      debugPrint('LocationService: Geocoding response - $locations');
+
+      if (locations.isEmpty) {
+        debugPrint('LocationService: No locations found for address');
+        return null;
+      }
+
+      final location = locations.first;
+      debugPrint(
+          'LocationService: Found coordinates - ${location.latitude}, ${location.longitude}');
+      return GeoPoint(location.latitude, location.longitude);
+    } catch (e) {
+      debugPrint('LocationService: Error getting coordinates from address: $e');
+      return null;
+    }
+  }
+
+  Future<String?> getAddressFromCoordinates(GeoPoint point) async {
+    try {
+      debugPrint(
+          'LocationService: Attempting to get address for coordinates: ${point.latitude}, ${point.longitude}');
+
+      final placemarks = await placemarkFromCoordinates(
+        point.latitude,
+        point.longitude,
+      );
+      debugPrint('LocationService: Reverse geocoding response - $placemarks');
+
+      if (placemarks.isEmpty) {
+        debugPrint('LocationService: No address found for coordinates');
+        return null;
+      }
+
+      final place = placemarks.first;
+      final components = <String>[
+        place.street ?? '',
+        place.locality ?? '',
+        place.administrativeArea ?? '',
+        place.postalCode ?? '',
+        place.country ?? '',
+      ];
+      final address = components.where((e) => e.isNotEmpty).join(', ');
+      debugPrint('LocationService: Found address - $address');
+      return address;
+    } catch (e) {
+      debugPrint('LocationService: Error getting address from coordinates: $e');
+      return null;
+    }
   }
 
   double calculateDistance(GeoPoint start, GeoPoint end) {
-    return Geolocator.distanceBetween(
-      start.latitude,
-      start.longitude,
-      end.latitude,
-      end.longitude,
-    );
+    // Using the Haversine formula to calculate distance between two points
+    const p = 0.017453292519943295; // Math.PI / 180
+    const c = cos;
+    final a = 0.5 -
+        c((end.latitude - start.latitude) * p) / 2 +
+        c(start.latitude * p) *
+            c(end.latitude * p) *
+            (1 - c((end.longitude - start.longitude) * p)) /
+            2;
+
+    // Return distance in meters
+    return 12742 * asin(sqrt(a)) * 1000; // 2 * R; R = 6371 km
   }
 
   void dispose() {
