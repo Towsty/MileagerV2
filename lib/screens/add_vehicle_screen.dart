@@ -156,20 +156,32 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       print('Converted URL: $finalPhotoUrl');
     }
 
-    final vehicle = Vehicle(
-      id: widget.vehicle?.id ??
-          DateTime.now().millisecondsSinceEpoch.toString(),
-      make: _makeController.text,
-      model: _modelController.text,
-      year: int.parse(_yearController.text),
-      color: _colorController.text,
-      vin: _vinController.text,
-      tag: _tagController.text,
-      startingOdometer: double.parse(_odometerController.text),
-      nickname: _nicknameController.text,
-      photoPath: _useLocalPhoto ? _photoPath : null,
-      photoUrl: finalPhotoUrl,
-    );
+    final vehicle = widget.vehicle != null
+        ? Vehicle.existing(
+            id: widget.vehicle!.id,
+            make: _makeController.text,
+            model: _modelController.text,
+            year: int.parse(_yearController.text),
+            color: _colorController.text,
+            vin: _vinController.text,
+            tag: _tagController.text,
+            startingOdometer: double.parse(_odometerController.text),
+            nickname: _nicknameController.text,
+            photoPath: _useLocalPhoto ? _photoPath : null,
+            photoUrl: finalPhotoUrl,
+          )
+        : Vehicle.create(
+            make: _makeController.text,
+            model: _modelController.text,
+            year: int.parse(_yearController.text),
+            color: _colorController.text,
+            vin: _vinController.text,
+            tag: _tagController.text,
+            startingOdometer: double.parse(_odometerController.text),
+            nickname: _nicknameController.text,
+            photoPath: _useLocalPhoto ? _photoPath : null,
+            photoUrl: finalPhotoUrl,
+          );
 
     try {
       if (widget.vehicle != null) {
@@ -219,14 +231,13 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               ? CircleAvatar(
                   radius: 60,
                   backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: _photoPath != null && File(_photoPath!).existsSync()
+                      ? null
+                      : const Icon(Icons.add_a_photo, size: 40),
                   backgroundImage:
-                      _photoPath != null ? FileImage(File(_photoPath!)) : null,
-                  onBackgroundImageError: (exception, stackTrace) {
-                    print('Local image loading error: $exception');
-                  },
-                  child: _photoPath == null
-                      ? const Icon(Icons.add_a_photo, size: 40)
-                      : null,
+                      _photoPath != null && File(_photoPath!).existsSync()
+                          ? FileImage(File(_photoPath!))
+                          : null,
                 )
               : _photoUrlController.text.isNotEmpty
                   ? ClipRRect(

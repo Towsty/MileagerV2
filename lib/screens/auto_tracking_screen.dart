@@ -482,7 +482,7 @@ class _AutoTrackingScreenState extends State<AutoTrackingScreen> {
       AutoTrackingTrigger trigger, String deviceId, String vehicleId) {
     final vehicle = _vehicleProvider.vehicles.firstWhere(
       (v) => v.id == vehicleId,
-      orElse: () => Vehicle(
+      orElse: () => Vehicle.existing(
         id: vehicleId,
         make: 'Unknown',
         model: 'Vehicle',
